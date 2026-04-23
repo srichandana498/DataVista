@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostelOS Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            height: 100vh;
+        }
+        .sidebar {
+            background: #1e293b;
+            padding: 20px;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+        .logo {
+            margin-bottom: 40px;
+        }
+        .logo h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 4px;
+        }
+        .logo-sub {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: lowercase;
+        }
+        .nav-section {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 20px 0 8px 0;
+        }
+        .nav-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #94a3b8;
+            transition: all 0.2s;
+        }
+        .nav-item.active {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        .nav-item:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        .nav-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        .api-status-pill {
+            margin-top: auto;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .api-status-pill.ok {
+            background: rgba(52, 211, 153, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+        .api-status-pill.err {
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+        .live-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .main {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .topbar h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .live-badge {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(52, 211, 153, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #34d399;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .grid4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .grid2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .grid3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #334155;
+        }
+        .metric-card {
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .metric-value.expense { color: #38bdf8; }
+        .metric-value.rating { color: #fbbf24; }
+        .metric-value.complaints { color: #f87171; }
+        .metric-value.messages { color: #34d399; }
+        .metric-sub {
+            font-size: 11px;
+            color: #64748b;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #e2e8f0;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-title span {
+            font-size: 11px;
+            color: #64748b;
+            font-family: monospace;
+        }
+        .chart-container {
+            position: relative;
+            height: 160px;
+        }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .bar-label {
+            width: 50px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .bar-track {
+            flex: 1;
+            height: 16px;
+            background: #334155;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-right: 8px;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+        .bar-val {
+            width: 30px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .api-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .api-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .api-dot.ok { background: #34d399; }
+        .api-dot.err { background: #f87171; }
+        .mono {
+            font-family: monospace;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .small {
+            font-size: 11px;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .rating-big {
+            font-size: 36px;
+            font-weight: 600;
+            color: #fbbf24;
+            margin-bottom: 8px;
+        }
+        .stars-sm {
+            font-size: 14px;
+            color: #fbbf24;
+        }
+        .tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .tbl th,
+        .tbl td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        .tbl th {
+            color: #64748b;
+            font-weight: 500;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        .badge-wifi { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .badge-water { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+        .badge-electricity { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .badge-food { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+        .badge-travel { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .badge-shopping { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+        .green { color: #34d399; }
+        .amber { color: #fbbf24; }
+        .muted { color: #64748b; }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .error {
+            text-align: center;
+            padding: 60px;
+            color: #f87171;
+            font-size: 14px;
+        }
+        .select-input {
+            background: #334155;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .btn-primary {
+            background: #38bdf8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background: #0ea5e9;
+        }
+        .btn-primary:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+        .success-msg {
+            color: #34d399;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>HostelOS</h2>
+                <div class="logo-sub">kafka · flask · react</div>
+            </div>
+            <div class="nav-section">Overview</div>
+            <div class="nav-item active" data-section="dashboard">
+                <span class="nav-icon">â</span>Dashboard
+            </div>
+            <div class="nav-item" data-section="stream">
+                <span class="nav-icon">â</span>Live Stream
+            </div>
+            <div class="nav-section">Management</div>
+            <div class="nav-item" data-section="complaints">
+                <span class="nav-icon">â</span>Complaints
+            </div>
+            <div class="nav-item" data-section="finance">
+                <span class="nav-icon">â</span>Finance
+            </div>
+            <div class="nav-item" data-section="rooms">
+                <span class="nav-icon">â</span>Rooms
+            </div>
+            <div class="api-status-pill ok" id="api-status">
+                <span class="live-dot"></span>
+                <span>API Connected</span>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div id="loading" class="loading">Connecting to Flask API...</div>
+            <div id="error" class="error" style="display: none;">Failed to connect to API</div>
+            
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="section active">
+                <div class="topbar">
+                    <h1>Dashboard</h1>
+                    <div class="live-badge">
+                        <span class="live-dot"></span>
+                        LIVE · Kafka
+                    </div>
+                </div>
+
+                <div class="grid4">
+                    <div class="card metric-card">
+                        <div class="metric-label">Total Expense</div>
+                        <div class="metric-value expense" id="total-expense">-</div>
+                        <div class="metric-sub">all transactions</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Avg Rating</div>
+                        <div class="metric-value rating" id="avg-rating">-</div>
+                        <div class="metric-sub" id="rating-stars">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Total Complaints</div>
+                        <div class="metric-value complaints" id="total-complaints">-</div>
+                        <div class="metric-sub">from Kafka stream</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Messages</div>
+                        <div class="metric-value messages" id="message-count">-</div>
+                        <div class="metric-sub">processed</div>
+                    </div>
+                </div>
+
+                <div class="grid2">
+                    <div class="card">
+                        <div class="card-title">Expense Trend <span class="mono small">GET /api/dashboard</span></div>
+                        <div class="chart-container">
+                            <canvas id="expense-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Category Breakdown <span>live</span></div>
+                        <div class="chart-container">
+                            <canvas id="category-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid3">
+                    <div class="card">
+                        <div class="card-title">Complaint Distribution</div>
+                        <div id="complaint-bars"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Rating Trend</div>
+                        <div class="rating-big" id="rating-big">-</div>
+                        <div class="stars-sm" id="rating-stars-big">-</div>
+                        <div class="chart-container">
+                            <canvas id="rating-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">API Endpoints</div>
+                        <div id="api-endpoints"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Stream Section -->
+            <div id="stream-section" class="section">
+                <div class="topbar">
+                    <h1>Live Stream</h1>
+                    <div class="live-badge">
+                        <span class="live-dot"></span>
+                        LIVE · Kafka
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Raw Kafka Messages <span id="stream-total">0 total · GET /api/messages</span></div>
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Complaint</th>
+                                <th>Expense</th>
+                                <th>Category</th>
+                                <th>Rating</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messages-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Complaints Section -->
+            <div id="complaints-section" class="section">
+                <div class="topbar">
+                    <h1>Complaints</h1>
+                    <div class="live-badge">
+                        <span class="live-dot"></span>
+                        LIVE · Kafka
+                    </div>
+                </div>
+                <div class="grid3">
+                    <div class="card metric-card">
+                        <div class="metric-label">WiFi Issues</div>
+                        <div class="metric-value" id="wifi-count" style="color: #38bdf8;">-</div>
+                        <div class="metric-sub" id="wifi-percent">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Water Issues</div>
+                        <div class="metric-value" id="water-count" style="color: #34d399;">-</div>
+                        <div class="metric-sub" id="water-percent">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Electricity Issues</div>
+                        <div class="metric-value" id="electricity-count" style="color: #fbbf24;">-</div>
+                        <div class="metric-sub" id="electricity-percent">-</div>
+                    </div>
+                </div>
+                <div class="grid2">
+                    <div class="card">
+                        <div class="card-title">Summary <span>GET /api/complaints</span></div>
+                        <div class="metric-value" id="complaints-total" style="color: #f87171; font-size: 36px; margin-bottom: 8px;">-</div>
+                        <div class="muted small">Worst: <span id="complaints-worst" style="color: #f87171;">-</span></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Submit Complaint <span>POST /api/complaints/add</span></div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <select id="complaint-type" class="select-input">
+                                <option value="wifi">WiFi</option>
+                                <option value="water">Water</option>
+                                <option value="electricity">Electricity</option>
+                            </select>
+                            <button id="submit-complaint" class="btn-primary">Submit</button>
+                            <span id="complaint-msg" class="success-msg"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finance Section -->
+            <div id="finance-section" class="section">
+                <div class="topbar">
+                    <h1>Finance</h1>
+                    <div class="live-badge">
+                        <span class="live-dot"></span>
+                        LIVE · Kafka
+                    </div>
+                </div>
+                <div class="grid4">
+                    <div class="card metric-card">
+                        <div class="metric-label">Food Spend</div>
+                        <div class="metric-value" id="food-spend" style="color: #a78bfa;">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Travel Spend</div>
+                        <div class="metric-value" id="travel-spend" style="color: #38bdf8;">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Shopping Spend</div>
+                        <div class="metric-value" id="shopping-spend" style="color: #34d399;">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Total Spend</div>
+                        <div class="metric-value expense" id="finance-total">-</div>
+                        <div class="metric-sub" id="finance-avg">-</div>
+                    </div>
+                </div>
+                <div class="grid2">
+                    <div class="card">
+                        <div class="card-title">Spending Over Time <span>GET /api/finance</span></div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="finance-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Recent Transactions</div>
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finance-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rooms Section -->
+            <div id="rooms-section" class="section">
+                <div class="topbar">
+                    <h1>Rooms</h1>
+                    <button id="add-room-btn" class="btn-primary">+ Add Room</button>
+                </div>
+                <div class="grid3" style="margin-bottom: 20px;">
+                    <div class="card metric-card">
+                        <div class="metric-label">Occupied</div>
+                        <div class="metric-value" id="rooms-occupied" style="color: #38bdf8;">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Available</div>
+                        <div class="metric-value" id="rooms-available" style="color: #34d399;">-</div>
+                    </div>
+                    <div class="card metric-card">
+                        <div class="metric-label">Maintenance</div>
+                        <div class="metric-value" id="rooms-maintenance" style="color: #f87171;">-</div>
+                    </div>
+                </div>
+                <div class="grid4" id="rooms-grid">
+                </div>
+            </div>
+
+            <!-- Room Edit Modal -->
+            <div id="room-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; min-width: 400px;">
+                    <h3 style="margin-bottom: 16px; color: #e2e8f0;" id="modal-title">Edit Room</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div>
+                            <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Room Number</label>
+                            <input type="number" id="room-number" class="select-input" style="width: 100%;" placeholder="e.g., 117">
+                        </div>
+                        <div>
+                            <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Status</label>
+                            <select id="room-status" class="select-input" style="width: 100%;">
+                                <option value="Available">Available</option>
+                                <option value="Occupied">Occupied</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div id="student-field">
+                            <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Student Name</label>
+                            <input type="text" id="student-name" class="select-input" style="width: 100%;" placeholder="Enter student name">
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <button id="save-room" class="btn-primary">Save</button>
+                            <button id="delete-room" class="btn-primary" style="background: #f87171;">Delete</button>
+                            <button id="cancel-room" class="btn-primary" style="background: #64748b;">Cancel</button>
+                        </div>
+                        <div id="room-msg" class="success-msg"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let charts = {};
+        let currentData = {};
+
+        function stars(n) {
+            return '★'.repeat(n) + '☆'.repeat(5 - n);
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('api-status');
+            const statusText = status.querySelector('span:last-child');
+            if (connected) {
+                status.className = 'api-status-pill ok';
+                statusText.textContent = 'API Connected';
+            } else {
+                status.className = 'api-status-pill err';
+                statusText.textContent = 'API Offline';
+            }
+        }
+
+        function createBarChart(data, containerId, colors) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            const total = Object.values(data).reduce((a, b) => a + b, 0) || 1;
+            
+            Object.entries(data).forEach(([key, value]) => {
+                const barRow = document.createElement('div');
+                barRow.className = 'bar-row';
+                barRow.innerHTML = `
+                    <div class="bar-label">${key}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: ${(value / total * 100)}%; background: ${colors[key] || '#64748b'}"></div>
+                    </div>
+                    <div class="bar-val" style="color: ${colors[key] || '#64748b'}">${value}</div>
+                `;
+                container.appendChild(barRow);
+            });
+        }
+
+        function createLineChart(ctx, data, color) {
+            if (charts[ctx.canvas.id]) {
+                charts[ctx.canvas.id].destroy();
+            }
+            
+            charts[ctx.canvas.id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map((_, i) => i),
+                    datasets: [{
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        fill: true,
+                        borderWidth: 1.5,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            display: false,
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDonutChart(ctx, data, colors) {
+            if (charts[ctx.canvas.id]) {
+                charts[ctx.canvas.id].destroy();
+            }
+            
+            charts[ctx.canvas.id] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function updateDashboard(data) {
+            // Update metrics
+            document.getElementById('total-expense').textContent = `₹${data.total_expense.toLocaleString('en-IN')}`;
+            document.getElementById('avg-rating').textContent = data.avg_rating;
+            document.getElementById('rating-stars').textContent = stars(Math.round(data.avg_rating));
+            
+            const totalComplaints = Object.values(data.complaints).reduce((a, b) => a + b, 0);
+            document.getElementById('total-complaints').textContent = totalComplaints;
+            document.getElementById('message-count').textContent = data.message_count;
+
+            // Update charts
+            createLineChart(document.getElementById('expense-chart').getContext('2d'), data.expense_trend, '#38bdf8');
+            createDonutChart(document.getElementById('category-chart').getContext('2d'), data.categories, ['#a78bfa', '#38bdf8', '#34d399']);
+            createLineChart(document.getElementById('rating-chart').getContext('2d'), data.rating_trend, '#fbbf24');
+
+            // Update complaint bars
+            createBarChart(data.complaints, 'complaint-bars', {
+                wifi: '#38bdf8',
+                water: '#34d399',
+                electricity: '#fbbf24'
+            });
+
+            // Update rating display
+            document.getElementById('rating-big').textContent = data.avg_rating;
+            document.getElementById('rating-stars-big').textContent = stars(Math.round(data.avg_rating));
+
+            // Update API endpoints
+            const endpoints = ['/api/dashboard', '/api/messages', '/api/complaints', '/api/finance', '/api/rooms'];
+            const apiContainer = document.getElementById('api-endpoints');
+            apiContainer.innerHTML = '';
+            endpoints.forEach(endpoint => {
+                const row = document.createElement('div');
+                row.className = 'api-row';
+                row.innerHTML = `
+                    <span class="api-dot ok"></span>
+                    <span class="mono small">${endpoint}</span>
+                `;
+                apiContainer.appendChild(row);
+            });
+        }
+
+        function updateStream(messages) {
+            const tbody = document.getElementById('messages-tbody');
+            tbody.innerHTML = '';
+            
+            messages.forEach((msg, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="mono muted">${messages.length - i}</td>
+                    <td><span class="badge badge-${msg.complaint}">${msg.complaint}</span></td>
+                    <td class="mono green">â${msg.expense}</td>
+                    <td><span class="badge badge-${msg.category}">${msg.category}</span></td>
+                    <td class="amber">${stars(msg.rating)}</td>
+                    <td class="mono muted small">${msg.timestamp}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('stream-total').textContent = `${messages.length} total · GET /api/messages`;
+        }
+
+        function updateComplaints(data) {
+            document.getElementById('wifi-count').textContent = data.breakdown.wifi?.count || 0;
+            document.getElementById('wifi-percent').textContent = `${data.breakdown.wifi?.percent || 0}% of total`;
+            
+            document.getElementById('water-count').textContent = data.breakdown.water?.count || 0;
+            document.getElementById('water-percent').textContent = `${data.breakdown.water?.percent || 0}% of total`;
+            
+            document.getElementById('electricity-count').textContent = data.breakdown.electricity?.count || 0;
+            document.getElementById('electricity-percent').textContent = `${data.breakdown.electricity?.percent || 0}% of total`;
+            
+            document.getElementById('complaints-total').textContent = data.total_count;
+            document.getElementById('complaints-worst').textContent = data.worst;
+        }
+
+        function updateFinance(data, messages) {
+            document.getElementById('food-spend').textContent = `₹${(data.by_category.food || 0) * 170}`;
+            document.getElementById('travel-spend').textContent = `₹${(data.by_category.travel || 0) * 220}`;
+            document.getElementById('shopping-spend').textContent = `₹${(data.by_category.shopping || 0) * 180}`;
+            document.getElementById('finance-total').textContent = `₹${data.total_expense.toLocaleString('en-IN')}`;
+            document.getElementById('finance-avg').textContent = `avg ₹${data.avg_per_msg}/msg`;
+
+            // Create finance chart
+            const buckets = messages.slice(0, 15).reverse().map(m => ({
+                food: m.category === "food" ? m.expense : 0,
+                travel: m.category === "travel" ? m.expense : 0,
+                shopping: m.category === "shopping" ? m.expense : 0,
+            }));
+
+            const ctx = document.getElementById('finance-chart').getContext('2d');
+            if (charts['finance-chart']) {
+                charts['finance-chart'].destroy();
+            }
+            
+            charts['finance-chart'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: buckets.map((_, i) => i),
+                    datasets: [
+                        { label: "Food", data: buckets.map(b => b.food), backgroundColor: "#a78bfa88", borderRadius: 4 },
+                        { label: "Travel", data: buckets.map(b => b.travel), backgroundColor: "#38bdf888", borderRadius: 4 },
+                        { label: "Shopping", data: buckets.map(b => b.shopping), backgroundColor: "#34d39988", borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { display: false, stacked: true },
+                        y: { display: false, stacked: true }
+                    }
+                }
+            });
+
+            // Update transactions table
+            const tbody = document.getElementById('finance-tbody');
+            tbody.innerHTML = '';
+            messages.slice(0, 12).forEach(msg => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="badge badge-${msg.category}">${msg.category}</span></td>
+                    <td class="mono green">â${msg.expense}</td>
+                    <td class="mono muted small">${msg.timestamp}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateRooms(data) {
+            document.getElementById('rooms-occupied').textContent = data.occupied;
+            document.getElementById('rooms-available').textContent = data.available;
+            document.getElementById('rooms-maintenance').textContent = data.rooms.filter(r => r.status === "Maintenance").length;
+
+            const roomsGrid = document.getElementById('rooms-grid');
+            roomsGrid.innerHTML = '';
+            
+            data.rooms.forEach(room => {
+                const color = room.status === "Occupied" ? "#38bdf8" : room.status === "Available" ? "#34d399" : "#f87171";
+                const roomCard = document.createElement('div');
+                roomCard.className = 'card metric-card';
+                roomCard.style.cursor = 'pointer';
+                roomCard.innerHTML = `
+                    <div class="metric-label">Room ${room.id}</div>
+                    <div style="font-size: 14px; font-weight: 500; margin-top: 6px; color: ${color}">${room.status}</div>
+                    ${room.student ? `<div class="muted small" style="margin-top: 4px;">${room.student}</div>` : ''}
+                `;
+                roomCard.onclick = () => openRoomModal(room.id, room.status, room.student);
+                roomsGrid.appendChild(roomCard);
+            });
+        }
+
+        // Room Management Functions
+        let currentEditingRoom = null;
+
+        function openRoomModal(roomId = null, status = 'Available', student = null) {
+            currentEditingRoom = roomId;
+            const modal = document.getElementById('room-modal');
+            const title = document.getElementById('modal-title');
+            const roomNumber = document.getElementById('room-number');
+            const roomStatus = document.getElementById('room-status');
+            const studentName = document.getElementById('student-name');
+            const deleteBtn = document.getElementById('delete-room');
+            const studentField = document.getElementById('student-field');
+
+            if (roomId) {
+                title.textContent = `Edit Room ${roomId}`;
+                roomNumber.value = roomId;
+                roomNumber.disabled = true;
+                roomStatus.value = status;
+                studentName.value = student || '';
+                deleteBtn.style.display = 'inline-block';
+            } else {
+                title.textContent = 'Add New Room';
+                roomNumber.value = '';
+                roomNumber.disabled = false;
+                roomStatus.value = 'Available';
+                studentName.value = '';
+                deleteBtn.style.display = 'none';
+            }
+
+            // Show/hide student field based on status
+            function updateStudentField() {
+                studentField.style.display = roomStatus.value === 'Occupied' ? 'block' : 'none';
+            }
+            updateStudentField();
+            roomStatus.addEventListener('change', updateStudentField);
+
+            modal.style.display = 'block';
+        }
+
+        function closeRoomModal() {
+            document.getElementById('room-modal').style.display = 'none';
+            document.getElementById('room-msg').textContent = '';
+        }
+
+        async function saveRoom() {
+            const roomNumber = parseInt(document.getElementById('room-number').value);
+            const roomStatus = document.getElementById('room-status').value;
+            const studentName = document.getElementById('student-name').value.trim();
+            const msg = document.getElementById('room-msg');
+
+            if (!roomNumber) {
+                msg.textContent = 'Room number required';
+                return;
+            }
+
+            if (roomStatus === 'Occupied' && !studentName) {
+                msg.textContent = 'Student name required for occupied room';
+                return;
+            }
+
+            try {
+                let response;
+                if (currentEditingRoom) {
+                    // Update existing room
+                    response = await fetch(`${API_BASE}/rooms/${roomNumber}/update`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: roomStatus,
+                            student: roomStatus === 'Occupied' ? studentName : null
+                        })
+                    });
+                } else {
+                    // Add new room
+                    response = await fetch(`${API_BASE}/rooms/add`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ room_number: roomNumber })
+                    });
+                    
+                    // If new room added successfully, update its status if needed
+                    if (response.ok && roomStatus !== 'Available') {
+                        await fetch(`${API_BASE}/rooms/${roomNumber}/update`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                status: roomStatus,
+                                student: roomStatus === 'Occupied' ? studentName : null
+                            })
+                        });
+                    }
+                }
+
+                const result = await response.json();
+                if (response.ok) {
+                    msg.textContent = result.message;
+                    setTimeout(() => {
+                        closeRoomModal();
+                        loadData(); // Refresh data
+                    }, 1000);
+                } else {
+                    msg.textContent = result.message || 'Error saving room';
+                }
+            } catch (error) {
+                msg.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function deleteRoom() {
+            if (!currentEditingRoom) return;
+            
+            if (!confirm(`Are you sure you want to delete Room ${currentEditingRoom}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/rooms/${currentEditingRoom}/remove`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                const msg = document.getElementById('room-msg');
+                
+                if (response.ok) {
+                    msg.textContent = result.message;
+                    setTimeout(() => {
+                        closeRoomModal();
+                        loadData(); // Refresh data
+                    }, 1000);
+                } else {
+                    msg.textContent = result.message || 'Error deleting room';
+                }
+            } catch (error) {
+                document.getElementById('room-msg').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function loadData() {
+            Promise.all([
+                fetch(`${API_BASE}/dashboard`).then(r => r.json()),
+                fetch(`${API_BASE}/messages?limit=30`).then(r => r.json()),
+                fetch(`${API_BASE}/complaints`).then(r => r.json()),
+                fetch(`${API_BASE}/finance`).then(r => r.json()),
+                fetch(`${API_BASE}/rooms`).then(r => r.json()),
+                fetch(`${API_BASE}/health`).then(r => r.json())
+            ])
+            .then(([dashboard, messages, complaints, finance, rooms, health]) => {
+                // Hide loading, show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'none';
+                
+                // Update connection status
+                updateConnectionStatus(health.status === 'ok');
+                
+                // Store current data
+                currentData = { dashboard, messages, complaints, finance, rooms };
+                
+                // Update all sections
+                updateDashboard(dashboard);
+                updateStream(messages.messages);
+                updateComplaints(complaints);
+                updateFinance(finance, messages.messages);
+                updateRooms(rooms);
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                updateConnectionStatus(false);
+            });
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Update active nav
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Show corresponding section
+                const section = item.dataset.section;
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`${section}-section`).classList.add('active');
+            });
+        });
+
+        // Complaint submission
+        document.getElementById('submit-complaint').addEventListener('click', async () => {
+            const type = document.getElementById('complaint-type').value;
+            const button = document.getElementById('submit-complaint');
+            const msg = document.getElementById('complaint-msg');
+            
+            button.disabled = true;
+            button.textContent = 'Submitting...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/complaints/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type })
+                });
+                
+                const result = await response.json();
+                msg.textContent = result.message;
+                
+                // Reload data after submission
+                setTimeout(loadData, 1000);
+                
+                setTimeout(() => {
+                    msg.textContent = '';
+                }, 3000);
+            } catch (error) {
+                msg.textContent = 'Error!';
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Submit';
+            }
+        });
+
+        // Room Management Event Listeners
+        document.getElementById('add-room-btn').addEventListener('click', () => {
+            openRoomModal(); // Open modal for new room
+        });
+
+        document.getElementById('save-room').addEventListener('click', saveRoom);
+        document.getElementById('delete-room').addEventListener('click', deleteRoom);
+        document.getElementById('cancel-room').addEventListener('click', closeRoomModal);
+
+        // Close modal when clicking outside
+        document.getElementById('room-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'room-modal') {
+                closeRoomModal();
+            }
+        });
+
+        // Auto-refresh every 5 seconds
+        setInterval(loadData, 5000);
+        
+        // Initial load
+        loadData();
+    </script>
+</body>
+</html>
